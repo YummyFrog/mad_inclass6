@@ -1,47 +1,22 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
-import 'package:screen_retriever/screen_retriever.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    await windowManager.ensureInitialized();
-    await setupWindow();
-  }
+void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (context) => Counter(),
+      create: (context) => AgeProvider(),
       child: const MyApp(),
     ),
   );
 }
 
-const double windowWidth = 360;
-const double windowHeight = 640;
+class AgeProvider extends ChangeNotifier {
+  int _age = 0;
 
-Future<void> setupWindow() async {
-  await windowManager.setTitle('Provider Counter');
-  await windowManager.setSize(const Size(windowWidth, windowHeight));
-  await windowManager.setMinimumSize(const Size(windowWidth, windowHeight));
-  await windowManager.setMaximumSize(const Size(windowWidth, windowHeight));
+  int get age => _age;
 
-  final screen = await screenRetriever.getPrimaryDisplay();
-  final screenWidth = screen.size.width;
-  final screenHeight = screen.size.height;
-  final offsetX = (screenWidth - windowWidth) / 2;
-  final offsetY = (screenHeight - windowHeight) / 2;
-
-  await windowManager.setPosition(Offset(offsetX, offsetY));
-}
-
-class Counter with ChangeNotifier {
-  int value = 0;
-
-  void increment() {
-    value += 1;
+  void setAge(int newAge) {
+    _age = newAge;
     notifyListeners();
   }
 }
@@ -52,47 +27,115 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Age Counter',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        useMaterial3: true,
       ),
-      home: const MyHomePage(),
+      home: const AgeCounterScreen(),
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
+class AgeCounterScreen extends StatelessWidget {
+  const AgeCounterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Flutter Demo Home Page'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Consumer<Counter>(
-              builder: (context, counter, child) => Text(
-                '${counter.value}',
-                style: Theme.of(context).textTheme.headlineMedium,
+      body: Consumer<AgeProvider>(
+        builder: (context, ageProvider, child) {
+          int age = ageProvider.age;
+          String message;
+          Color backgroundColor;
+
+          if (age <= 12) {
+            message = "You're a child!";
+            backgroundColor = Colors.lightBlue.shade100;
+          } else if (age <= 19) {
+            message = "Teenager time!";
+            backgroundColor = Colors.lightGreen.shade100;
+          } else if (age <= 30) {
+            message = "You're a young adult!";
+            backgroundColor = Colors.yellow.shade100;
+          } else if (age <= 50) {
+            message = "You're an adult now!";
+            backgroundColor = Colors.orange.shade100;
+          } else {
+            message = "Golden years!";
+            backgroundColor = Colors.grey.shade300;
+          }
+
+          Color progressBarColor;
+          if (age <= 33) {
+            progressBarColor = Colors.green;
+          } else if (age <= 67) {
+            progressBarColor = Colors.yellow;
+          } else {
+            progressBarColor = Colors.red;
+          }
+
+          return Container(
+            color: backgroundColor,
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Age Counter",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "I am ${age} years old",
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    message,
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  Slider(
+                    value: age.toDouble(),
+                    min: 0,
+                    max: 99,
+                    divisions: 99,
+                    label: "$age",
+                    onChanged: (double newValue) {
+                      ageProvider.setAge(newValue.toInt());
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+                  
+                  Container(
+                    width: 300,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.black12,
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: age / 99,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: progressBarColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          var counter = context.read<Counter>();
-          counter.increment();
+          );
         },
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
 }
+
